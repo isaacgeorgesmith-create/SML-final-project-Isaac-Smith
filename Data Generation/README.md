@@ -6,6 +6,8 @@ This folder contains materials related to the data generation process for this p
 
 `viscous.sh` and `in.viscous` are, respectively, the bash script for running the MD simulations, and the LAMMPS input script for the simulation
 
+`0.25_z15` is the input datafile for the LAMMPS script (it contains the starting positions of all the particls)
+
 `RawDiodeDataProcessing.ipynb` is the notebook that was used to process the raw molecular dynamics data
 
 `current.csv`, `efield.csv`, and `current_splied.csv` are the files containing the processed data, which the ML model is trained on
