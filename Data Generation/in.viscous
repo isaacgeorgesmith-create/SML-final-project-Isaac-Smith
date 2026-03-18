@@ -1,0 +1,163 @@
+log ${logfile} append 
+
+# -----------------------------------------------------------------------------#
+# set up units and box
+
+units       lj
+atom_style  charge
+dimension   3
+
+boundary    p p p
+
+# set a timer to keep track of whether slurm time limit is coming up
+timer timeout ${timeleft} every 1000
+
+
+# -----------------------------------------------------------------------------#
+# parameters and useful information
+variable T_star    index  0.0125   # 1/80
+variable save_freq index 50
+
+#variable ediff     index $( (v_eps_space-v_eps_surf) )
+#variable emean     index $( (v_eps_space+v_eps_surf)/2 )
+
+# scaled units
+
+
+# -----------------------------------------------------------------------------#
+# set up system, pairwise interactions, polarizability
+
+# just this first time
+if "${restart} == scratch" then &
+    "print 'scratch'" &
+    "read_data input-data/${datafile}           group all" &
+else &
+    "print 'restarting'" &	
+    "read_restart ${restartfile}" &
+    "shell  gunzip ${outdir}/all.lammpstrj.gz" 
+
+group fixed	type 2 4
+group mobile	type 1 3
+
+mass 1 1
+mass 2 1 
+mass 3 1
+mass 4 1
+
+dielectric ${eps}
+
+# set up pair styles
+pair_style      lj/cut/coul/long 1.122 12.0 
+
+pair_coeff      * * 0.0125 1.0           # epsilon, sigma
+#pair_coeff      1 * 0 0               # epsilon, sigma
+#pair_coeff      * 4 0 0               # epsilon, sigma
+#pair_coeff      1 2*3 0.0125 0.5 0.5612  # epsilon, sigma, cutoff
+pair_modify     shift yes             # shift the LJ part to make WCA
+
+kspace_style    pppm 0.00001 # accuracy
+
+# polarizability
+#if "${dielectric} == yes" then &
+#   "fix             fix_plr interfaces polarize/bem/icc 1 1.0e-4" &
+#   "fix_modify      fix_plr itr_max 200 omega 0.8 dielectrics ${ediff} ${emean} ${emean} NULL NULL"
+
+# -----------------------------------------------------------------------------#
+# neighbor list and balancing
+
+neigh_modify    every 1 delay 0 check yes one 10000
+
+# balance load because there is an empty region of the box
+# comm_style tiled
+# balance    1.2 rcb
+
+
+# -----------------------------------------------------------------------------#
+# outputs
+
+# compute efield ions efield/atom
+
+variable Ez equal ${efield_strength}*(${a2}*cos(5*${a1}*2*3.1415926*(((step-1000)/20000)-1))+${a4}*sin(5*${a3}*2*3.1415926*(((step-1000)/20000)-1))+${a5}+${a6}*(((step-1000)/20000)-1)+${a7}*(((step-1000)/20000)-1)^2+${a8}*(((step-1000)/20000)-1)^3)
+
+# thermo
+thermo          ${save_freq}
+thermo_style    custom step evdwl ecoul elong epair pe ke v_Ez
+
+#f_fix_plr[1] f_fix_plr[2]" &
+
+thermo_modify   flush yes norm no
+
+# if restarting, run one step without dumping so the trajectory doesn't include
+# repeated timesteps. Can't avoid this in thermo, have to deal with in post processing
+if "${restart} == restart" then &
+    "run        1" &
+
+# dumping: q = q_free + q_induced
+#compute    qfree      all    property/atom q
+#compute    qscaled    all    property/atom q_scaled
+#compute    eps        all    property/atom epsilon
+#variable   totalq  atom   c_qscaled-(c_qfree/c_eps)+c_qfree
+
+#variable freq equal ${freq}
+
+dump            1 all custom ${save_freq} ${outdir}/all.lammpstrj id type q x y z vx vy vz fx fy fz
+dump_modify     1 delay 1000
+#dump_modify     1 colname q append yes first no  
+
+#dump            2 interfaces custom ${save_freq} ${outdir}/interfaces.lammpstrj id type q x y z
+#dump_modify     2 colname q append yes first no  
+
+
+# -----------------------------------------------------------------------------#
+# thermalize and set up integration
+
+#if "${efielddir} == on" then &
+#        "fix field all efield 0 0 ${efield_strength}"
+# push apart overlapping atoms
+timestep 0.05
+fix hold_fixed fixed setforce 0.0 0.0 0.0
+fix relaxing mobile nve/limit 0.1
+run 1000
+unfix relaxing
+
+# minimize 0.001 0.001 10000 100000
+
+if "${efielddir} == on" then &
+        "fix field all efield 0 0 v_Ez"
+
+region left block EDGE EDGE EDGE EDGE EDGE 0
+region right block EDGE EDGE EDGE EDGE 0 EDGE
+
+
+group left_ions dynamic mobile region left every 1
+group right_ions dynamic mobile region right every 1
+
+timestep 0.05
+
+# thermalize only if not reading velocities from the restart file
+if "${restart} == restart" then &
+    "print 'using velocities from the restart file'" &
+    else &
+        "velocity mobile create ${T_star} ${seed} dist gaussian mom yes rot yes"
+
+#unfix hold_fixed
+fix             fix_nve mobile nve
+#fix             fix_langevin left_ions langevin ${T_star} ${T_star} $(20.0*dt) ${seed}
+#fix        	fix_langevin right_ions langevin ${T_star} ${T_star} $(20.0*dt) ${seed}
+fix 		fix_langevin mobile langevin ${T_star} ${T_star} $(20.0*dt) ${seed}
+#fix		fix_spring fixed spring/self 0.5
+#fix left_drag left_ions viscous 0.1
+#fix right_drag right_ions viscous 0.05
+
+# -----------------------------------------------------------------------------#
+# run and exit gracefully when done
+
+run             $( 41000 ) upto 
+
+write_restart ${outdir}/end.restart
+
+write_data ${outdir}/end.data nocoeff
+write_dump all custom ${outdir}/last_frame.lammpstrj id type q x y z
+
+shell           gzip ${outdir}/all.lammpstrj
+#shell           gzip ${outdir}/interfaces.lammpstrj
