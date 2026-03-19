@@ -5,6 +5,4 @@ Data Generation includes information and materials related to how the data was g
 
 Machine Learning Model includes information and materials related to them ML model and its training
 
-The 2 page abstract is in the main folder
-
-The link to my youtube video presentation is: https://youtu.be/BHKnfGgMLvI
+The 2 page abstract is in the main folder, as well as the slides for my presentation, which is available at: https://youtu.be/BHKnfGgMLvI
