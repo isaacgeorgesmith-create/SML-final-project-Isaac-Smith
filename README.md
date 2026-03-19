@@ -7,4 +7,4 @@ Machine Learning Model includes information and materials related to them ML mod
 
 The 2 page abstract is in the main folder
 
-The link to my youtube video is: 
+The link to my youtube video presentation is: https://youtu.be/BHKnfGgMLvI
