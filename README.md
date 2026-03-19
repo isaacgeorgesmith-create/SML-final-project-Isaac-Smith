@@ -4,3 +4,7 @@ Final Project for 2026WI_ELEC_ENG_395-0_SEC12_AND_495-0_SEC13. In this project, 
 Data Generation includes information and materials related to how the data was generated
 
 Machine Learning Model includes information and materials related to them ML model and its training
+
+The 2 page abstract is in the main folder
+
+The link to my youtube video is: 
