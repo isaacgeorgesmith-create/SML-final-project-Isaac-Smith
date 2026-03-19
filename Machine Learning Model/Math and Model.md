@@ -20,5 +20,5 @@ The structure of the trunk net was: (1 x 64) linear layer -> Tanh activation lay
 
 **Training**
 
-The 100 trajectories were divided into 3 data sets: 70 in the training set, 15 in the validation set, and 15 in the test set. In each training cycle, I picked one time point randomly from the entire data set and predicted the current at that time for that trajectory given the time and electric field value over the trajectory that time point was from. I used `pytorch`'s `ADAM` optimizer and trained for 30000 cycles, with learning rates of 0.001, 0.0002, and 0.0001 for each set of 10000 cycles.
+The 100 trajectories were divided into 3 data sets: 70 in the training set, 15 in the validation set, and 15 in the test set. In each training cycle, I picked one time point randomly from the entire data set and predicted the current at that time for that trajectory given the time and electric field value over the trajectory that time point was from. I used `pytorch`'s `ADAM` optimizer and trained for 30000 cycles, with learning rates of 0.001, 0.0002, and 0.0001 for each set of 10000 cycles, and mean squared error loss.
 
